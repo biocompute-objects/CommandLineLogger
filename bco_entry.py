@@ -25,7 +25,6 @@ class KeyboardListener(PyKeyboardEvent):
         }
         # self.logger.setLevel(logging.DEBUG)
         self.new_event = threading.Event()
-        self.shift = False
         self.command = deque()
 
     def tap(self, keycode, character, press):
