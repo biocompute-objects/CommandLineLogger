@@ -13,36 +13,28 @@ from functools import partial
 from pykeyboard import PyKeyboardEvent
 
 class KeyboardListener(PyKeyboardEvent):
-    def __init__(self, entry, log_name):
+    def __init__(self, log_name, run_command=False):
         PyKeyboardEvent.__init__(self)
         self.logger = logging.getLogger(log_name + ".keyboard")
+        self.run_command = run_command
         self.control_characters = {
             'BackSpace': lambda x: x.pop(),
-            'Return': lambda x: flush_command(x),
+            'Return': lambda x: flush_command(x, self.run_command),
             'Shift_L': lambda x: x,
             'Shift_R': lambda x: x
         }
         # self.logger.setLevel(logging.DEBUG)
         self.new_event = threading.Event()
-        # self._reset_data()
         self.shift = False
         self.command = deque()
 
-    # def _reset_data(self):
-    #     self.event_data = {
-    #         "presses": 0
-    #     }
-
     def tap(self, keycode, character, press):
-        # logging.debug("Clicked keycode: {}".format(keycode))
         # self.logger.info("Input received: {}, {}, {}".format(keycode, character, press))
         if press:
             if character in self.control_characters:
-                self.control_characters[character](command)
+                self.control_characters[character](self.command)
             else:
-                command.append(character)
-        # self.logger.debug("Input received: {}, {}, {}".format(keycode, character, press))
-        # self.event_data["presses"] += 1
+                self.command.append(character)
         self.new_event.set()
 
     def escape(self, event):
@@ -53,14 +45,11 @@ class KeyboardListener(PyKeyboardEvent):
         """Returns an event and prepares the internal state so that it can start to build a new event"""
         self.new_event.clear()
         return
-        # data = self.event_data
-        # # self._reset_data()
-        # return data
 
     def has_new_event(self):
         return self.new_event.is_set()
 
-def flush_command(command):
+def flush_command(command, run_command):
 
     # This should block while awaiting the return code (as if blocking while a command was entered)
 
@@ -68,6 +57,8 @@ def flush_command(command):
     while len(command) > 0:
         command.popleft()
     print("Caught command {}".format(cmd))
+    if not run_command:
+        return
     # Starting a manager thread could be done here
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, err = None, None
@@ -103,9 +94,8 @@ logger.addHandler(sh)
 
 logger.info("BCO Capture, initialized")
 
-command = deque()
-
-key_listener = KeyboardListener(command, log_name)
+run_commands = False  #  *Actually* run the commands from a shell or not
+key_listener = KeyboardListener(log_name, run_commands)
 
 def shutdown(keyboard, signal, frame):
 
@@ -121,7 +111,7 @@ key_listener.start()
 
 print("Listener, starting...")
 while True:
-    time.sleep(1)
+    time.sleep(120)
 print("...Listener, shutting down")
 
 key_listener.stop()
