@@ -52,6 +52,8 @@ def flush_command(command, run_command):
 
     # This should block while awaiting the return code (as if blocking while a command was entered)
 
+    if len(command) == 0:
+        return
     cmd = ''.join(list(command))
     while len(command) > 0:
         command.popleft()
